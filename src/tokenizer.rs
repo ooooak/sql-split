@@ -96,8 +96,8 @@ impl<T> Tokenizer<T> where T: io::Read {
             match byte {
                 Some(item)  => {
                     match item {
-                        b'a'...b'z' |
-                        b'A'...b'Z' => {
+                        b'a'..=b'z' |
+                        b'A'..=b'Z' => {
                             self.reader.increment_index();
                             collection.push(item);
                         },
@@ -118,7 +118,7 @@ impl<T> Tokenizer<T> where T: io::Read {
 
     fn number(&mut self) -> Token {
         let mut collection = vec![];
-        while let Some(byte @ b'0'...b'9') = self.reader.peek() {
+        while let Some(byte @ b'0'..=b'9') = self.reader.peek() {
             self.reader.increment_index();
             collection.push(byte);
         }
@@ -166,7 +166,7 @@ impl<T> Tokenizer<T> where T: io::Read {
                     Ok(Some(Token::Ignore(byte)))
                 }
             },
-            Some(b'0'...b'9') => Ok(Some(self.number())),
+            Some(b'0'..=b'9') => Ok(Some(self.number())),
             Some(byte @ b'-') => {
                 if self.reader.peek_next() == Some(b'-') {
                     Ok(Some(Token::InlineComment(self.read_till(b'\n')?)))
@@ -175,8 +175,8 @@ impl<T> Tokenizer<T> where T: io::Read {
                     Ok(Some(Token::Ignore(byte)))
                 }
             },
-            Some(b'a'...b'z') | 
-            Some(b'A'...b'Z') => {
+            Some(b'a'..=b'z') | 
+            Some(b'A'..=b'Z') => {
                 // let keyword = ;
                 Ok(Some(Token::Keyword(self.keyword()?)))
             },

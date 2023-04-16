@@ -19,8 +19,6 @@ pub enum FileState{
 
 impl std::fmt::Display for FileState {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        use splitter::FileState;
-
         match self{
             FileState::New => write!(f, "{}", "New"),
             FileState::Continue => write!(f, "{}", "Continue")
