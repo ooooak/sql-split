@@ -2,7 +2,7 @@ use std::io::{BufReader};
 use std::io::prelude::*;
 use std::io;
 
-const DEFAULT_BUF_SIZE: usize = 16 * 1024;
+const DEFAULT_BUF_SIZE: usize = 8 * 1024;
 
 pub struct Reader<T> {
     buffer: [u8; DEFAULT_BUF_SIZE],
@@ -50,9 +50,7 @@ impl<T> Reader<T> where T: io::Read {
     }
 
     pub fn peek_next(&mut self) -> Option<u8> {
-        self.pos += 1;
         let byte = self.get_current_byte();
-        self.pos -= 1;
         byte
     }
 
@@ -78,17 +76,6 @@ mod reader_test{
     fn get(){
         let file = File::open("./example-files/content.txt").unwrap();
         let mut reader = Reader::new(file);
-
-        // let mut col = vec![];
-        // loop {                
-        //     let item = reader.get();
-        //     if !item.is_none() {
-        //         col.push(item.unwrap());
-        //         continue;
-        //     }
-        //     println!("buff: {:?} output: {:?}", n, str::from_utf8(&col));
-        //     break;
-        // }
         
         assert_eq!(reader.get(), Some(b'1'));
         assert_eq!(reader.get(), Some(b'2'));
