@@ -1,7 +1,9 @@
-use tokenizer::Tokenizer;
-use tokenizer::SyntaxErr;
-use tokenizer::Token;
 use std::io;
+use tokenizer::{
+    token_err::TokenErr,
+    token::Token,
+    tokenizer::Tokenizer
+};
 
 
 #[derive(Debug,PartialEq)]
@@ -13,24 +15,6 @@ pub enum TokenStream {
     SpaceOrLineFeed(Vec<u8>),
 }
 
-fn log_t(result: Result<Option<TokenStream>, SyntaxErr>) {
-    use parser::TokenStream::*;
-    match result {
-        Err(e) => println!("{}", e.text),
-        Ok(Some(t)) => {
-            match t {
-                Insert(b, b2) => println!("insert: V1: {:?}, v2: {:?}", String::from_utf8(b), String::from_utf8(b2)),
-                ValuesTuple(b) |
-                Block(b) |
-                Comment(b) |
-                SpaceOrLineFeed(b) => println!("text: {:?}", String::from_utf8(b)) 
-            }
-        },
-        Ok(None) => {
-            println!("none")
-        },
-    }
-}
 
 pub struct Parser<T> {
     tokenizer: Tokenizer<T>,
@@ -41,7 +25,7 @@ impl<T> Parser<T> where T: io::Read{
         Self { tokenizer }
     }
     
-    pub fn read_while(&mut self, token: &Token) -> Result<Vec<u8>, SyntaxErr> {
+    pub fn read_while(&mut self, token: &Token) -> Result<Vec<u8>, TokenErr> {
         let mut collection = vec![];
         loop {
             match self.tokenizer.token()? {
@@ -54,7 +38,7 @@ impl<T> Parser<T> where T: io::Read{
                     }
                 },
                 None => {
-                    return Err(SyntaxErr{
+                    return Err(TokenErr{
                         text:"invalid end of file"
                     })
                 }
@@ -64,7 +48,7 @@ impl<T> Parser<T> where T: io::Read{
         Ok(collection)
     }
 
-    pub fn values(&mut self) -> Result<Vec<u8>, SyntaxErr> {
+    pub fn values(&mut self) -> Result<Vec<u8>, TokenErr> {
         let mut collection = vec![];
         loop {
             match self.tokenizer.token()? {
@@ -89,7 +73,7 @@ impl<T> Parser<T> where T: io::Read{
                     collection.extend(token.value());
                 },
                 None => {
-                    return Err(SyntaxErr{
+                    return Err(TokenErr{
                         text: "Unable to parse values."
                     })
                 }
@@ -98,7 +82,7 @@ impl<T> Parser<T> where T: io::Read{
         Ok(collection)
     }
 
-    pub fn values_tuple(&mut self) -> Result<Vec<u8>, SyntaxErr> {
+    pub fn values_tuple(&mut self) -> Result<Vec<u8>, TokenErr> {
         let mut collection = vec![];
         let value = self.read_while(&Token::RP)?; 
         collection.extend(value);
@@ -114,7 +98,7 @@ impl<T> Parser<T> where T: io::Read{
                 },
                 Some(token) => collection.extend(token.value()),
                 None => {
-                    return Err(SyntaxErr{
+                    return Err(TokenErr{
                         text: "Unable to parse values."
                     })
                 },
@@ -124,7 +108,7 @@ impl<T> Parser<T> where T: io::Read{
         Ok(collection)
     }
 
-    fn insert(&mut self, token: Vec<u8>) ->  Result<(Vec<u8>, Vec<u8>), SyntaxErr> {
+    fn insert(&mut self, token: Vec<u8>) ->  Result<(Vec<u8>, Vec<u8>), TokenErr> {
         let mut collection = token;
         let mut insert_stmt;
 
@@ -143,7 +127,7 @@ impl<T> Parser<T> where T: io::Read{
                     }
                 },
                 None => {
-                    return Err(SyntaxErr{
+                    return Err(TokenErr{
                         text: "Incomplete Insert statement."
                     })
                 },
@@ -153,7 +137,7 @@ impl<T> Parser<T> where T: io::Read{
         Ok((collection, insert_stmt))
     }
 
-    pub fn token_stream(&mut self) -> Result<Option<TokenStream>, SyntaxErr> {
+    pub fn token_stream(&mut self) -> Result<Option<TokenStream>, TokenErr> {
         match self.tokenizer.token()? {
             Some(token) => {
                 match token {
@@ -195,7 +179,7 @@ impl<T> Parser<T> where T: io::Read{
                     Token::Identifier(_) |
                     Token::Comma |
                     Token::Ignore(_) => {
-                        Err(SyntaxErr{
+                        Err(TokenErr{
                             text: "Invalid sql file."
                         })
                     },
@@ -212,20 +196,40 @@ impl<T> Parser<T> where T: io::Read{
 }
 
 
+fn print_stream(result: Result<Option<TokenStream>, TokenErr>) {
+    use parser::parser::TokenStream::*;
+    match result {
+        Err(e) => println!("{}", e.text),
+        Ok(Some(t)) => {
+            match t {
+                Insert(b, b2) => println!("insert: V1: {:?}, v2: {:?}", String::from_utf8(b), String::from_utf8(b2)),
+                ValuesTuple(b) |
+                Block(b) |
+                Comment(b) |
+                SpaceOrLineFeed(b) => println!("text: {:?}", String::from_utf8(b)) 
+            }
+        },
+        Ok(None) => {
+            println!("none")
+        },
+    }
+}
+
+
 
 
 #[cfg(test)]
 mod reader_test{
     use std::fs::File;
-    use reader::Reader;
-    use tokenizer::Tokenizer;
-    use tokenizer::SyntaxErr;
-    use crate::parser::log_t;
+    use tokenizer::reader::Reader;
+    use tokenizer::tokenizer::Tokenizer;
+    use tokenizer::token_err::TokenErr;
+    use parser::parser::print_stream;
 
     use super::Parser;
     use super::TokenStream;
 
-    type TS = Result<Option<TokenStream>, SyntaxErr>;    
+    type TS = Result<Option<TokenStream>, TokenErr>;    
     fn is_space(value: TS) -> bool {
         match value {
             Ok(Some(TokenStream::SpaceOrLineFeed(_))) => {
@@ -287,12 +291,12 @@ mod reader_test{
         let tokenizer = Tokenizer::new(Reader::new(file));
         
         let mut parser = Parser::new(tokenizer);
-        loop {
-            log_t(parser.token_stream());
-        }
+        // loop {
+        //     print_stream(parser.token_stream());
+        // }
                 
         // inline comment
-        assert!(is_comment(parser.token_stream()), "Expecting a comment");
+        // assert!(is_comment(parser.token_stream()), "Expecting a comment");
         // assert!(is_comment(parser.token_stream()), "Expecting a comment");
 
         

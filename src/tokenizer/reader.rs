@@ -4,58 +4,78 @@ use std::io;
 
 const DEFAULT_BUF_SIZE: usize = 8 * 1024;
 
-pub struct Reader<T> {
+pub struct Reader<T>{
     buffer: [u8; DEFAULT_BUF_SIZE],
-    pos: usize,
+    index: usize,
     reader: BufReader<T>,
     bytes_read: usize,
 }
 
 impl<T> Reader<T> where T: io::Read {
     pub fn new(file: T) -> Self {
+        // reader
         let mut reader = Self {
             buffer: [0; DEFAULT_BUF_SIZE],
             reader: BufReader::new(file),
-            pos: 0,
+            index: 0,
             bytes_read: 0,
         };
 
-        reader.fill_buffer();
+        reader.read_buf();
         reader
     }
 
-    fn fill_buffer(&mut self) {
-        self.bytes_read = self.reader.read(&mut self.buffer).unwrap_or(0);
-        self.pos = 0; // reset index
-    }
+    #[inline(always)]
+    fn raw_get(&mut self) -> Option<u8> {
+        if self.bytes_read == 0 {
+            return None
+        }
 
-    fn get_current_byte(&mut self) -> Option<u8> {
-        if self.pos >= self.bytes_read {
-            self.fill_buffer();
-            if self.bytes_read == 0 {
-                return None;
+        if let Some(item) = self.buffer.get(self.index) {
+            return if self.bytes_read <= self.index {
+                None
+            }else{
+                Some(*item)
             }
         }
-        Some(self.buffer[self.pos])
+
+        // out of index load next buffer
+        self.read_buf();
+        self.raw_get()
     }
 
     pub fn get(&mut self) -> Option<u8> {
-        let byte = self.get_current_byte();
-        self.pos += 1;
+        let byte = self.raw_get();
+        self.index += 1;
         byte
     }
 
     pub fn peek(&mut self) -> Option<u8> {
-        self.get_current_byte()
+        self.raw_get()
     }
 
     pub fn peek_next(&mut self) -> Option<u8> {
-        let byte = self.get_current_byte();
-        byte
+        self.index += 1;
+        let item = self.raw_get();
+        self.index -= 1;
+        item
+    }
+
+
+    fn read_buf(&mut self) {
+        match self.reader.read(&mut self.buffer) {
+            Ok(size) => {
+                self.bytes_read = size;
+                self.index = 0; // reset index
+            },
+            Err(err) => {
+                panic!("{:?}", err);
+            }
+        }
     }
 
     pub fn increment_index(&mut self){
-        self.pos += 1;
+        self.index += 1;
     }
 }
 
@@ -67,14 +87,14 @@ mod reader_test{
 
     #[test]
     fn empty_file(){
-        let file = File::open("./example-files/empty.txt").unwrap();
+        let file = File::open("./resources/test_files/empty.txt").unwrap();
         let mut reader = Reader::new(file);
         assert_eq!(reader.get(), None);
     }
 
     #[test]
     fn get(){
-        let file = File::open("./example-files/content.txt").unwrap();
+        let file = File::open("./resources/test_files/content.txt").unwrap();
         let mut reader = Reader::new(file);
         
         assert_eq!(reader.get(), Some(b'1'));
@@ -93,7 +113,7 @@ mod reader_test{
 
     #[test]
     fn peek(){
-        let file = File::open("./example-files/content.txt").unwrap();
+        let file = File::open("./resources/test_files/content.txt").unwrap();
         let mut reader = Reader::new(file);
         assert_eq!(reader.peek(), Some(b'1'));
         let _skip_it = reader.get();
@@ -103,7 +123,7 @@ mod reader_test{
 
     #[test]
     fn peek_next(){
-        let file = File::open("./example-files/content.txt").unwrap();
+        let file = File::open("./resources/test_files/content.txt").unwrap();
         let mut reader = Reader::new(file);
         assert_eq!(reader.peek_next(), Some(b'2'));
         assert_eq!(reader.get(), Some(b'1'));

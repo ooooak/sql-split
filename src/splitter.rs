@@ -1,8 +1,10 @@
-use parser::TokenStream;
-use parser::Parser;
-use tokenizer::Tokenizer;
-use tokenizer::SyntaxErr;
-use reader::Reader;
+use parser::parser::TokenStream;
+use parser::parser::Parser;
+use tokenizer::{
+    tokenizer::Tokenizer, 
+    token_err::TokenErr, 
+    reader::Reader
+};
 use std::io;
 
 pub struct SplitterSettings<T>{
@@ -34,7 +36,7 @@ pub struct Splitter<T>{
 }
 
 pub enum SplitterState{
-    SyntaxErr(SyntaxErr),
+    SyntaxErr(TokenErr),
     // Reached output limit. send the chunk
     Chunk(FileState, Vec<u8>),
     // reached the EOF.

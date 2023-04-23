@@ -1,10 +1,10 @@
 #[macro_use] 
 extern crate clap;
+
+mod tokenizer;
 mod parser;
 mod splitter;
-mod reader;
 mod cli;
-mod tokenizer;
 
 use std::str;
 use std::process;

@@ -1,64 +1,10 @@
-use std::str;
-use reader::Reader;
+use tokenizer::reader::Reader;
 use std::io;
-
-#[derive(Debug,PartialEq,Clone)]
-pub enum Token{
-    String(Vec<u8>),
-    Keyword(Vec<u8>),
-    Comment(Vec<u8>),
-    InlineComment(Vec<u8>),
-    Identifier(Vec<u8>),
-    LineFeed(u8), // could be /t or /n /r
-    Space,
-    Comma,
-    LP, 
-    RP,
-    SemiColon,
-    Ignore(u8),
-    Dot,
-}
-
-impl Token {
-    pub fn keyword(&self, string: &str) -> bool {
-        match self {
-            Token::Keyword(chunk) => {
-                let value = str::from_utf8(&chunk).unwrap();
-                value.to_lowercase() == string
-            },
-            _ => false,
-        }
-    }
-
-    pub fn value(self) -> Vec<u8> {
-        match self {
-            Token::String(chunk) => chunk,
-            Token::Keyword(chunk) => chunk,
-            Token::Comment(chunk) => chunk,
-            Token::InlineComment(chunk) => chunk,
-            Token::Identifier(chunk) => chunk,
-            Token::Ignore(byte) => vec![byte],
-            Token::Comma => vec![b','],
-            Token::LP => vec![b'('],
-            Token::RP => vec![b')'],
-            Token::SemiColon => vec![b';'],
-            Token::Dot => vec![b'.'],
-            Token::Space => vec![b' '],
-            Token::LineFeed(byte) => vec![byte],
-        }        
-    }
-}
-
+use tokenizer::token::Token;
+use tokenizer::token_err::TokenErr;
 
 pub struct Tokenizer<T> {
     reader: Reader<T>,
-    // line_num: usize,
-}
-
-#[derive(Debug)]
-pub struct SyntaxErr{
-    // line_num: usize,
-    pub text: &'static str
 }
 
 impl<T> Tokenizer<T> where T: io::Read {
@@ -66,7 +12,7 @@ impl<T> Tokenizer<T> where T: io::Read {
         Self {reader}
     }
 
-    fn read_till(&mut self, item: u8) -> Result<Vec<u8>, SyntaxErr> {
+    fn read_till(&mut self, item: u8) -> Result<Vec<u8>, TokenErr> {
         let mut collection = vec![];
 
         loop {
@@ -79,7 +25,7 @@ impl<T> Tokenizer<T> where T: io::Read {
                     }
                 },
                 None => {
-                    return Err(SyntaxErr{
+                    return Err(TokenErr{
                         text: "Unexpected end of the file."
                     })
                 }
@@ -89,7 +35,7 @@ impl<T> Tokenizer<T> where T: io::Read {
         Ok(collection)
     }
 
-    fn keyword(&mut self) -> Result<Vec<u8>, SyntaxErr> {
+    fn keyword(&mut self) -> Result<Vec<u8>, TokenErr> {
         let mut collection = vec![];
         loop {
             let byte = self.reader.peek();
@@ -105,7 +51,7 @@ impl<T> Tokenizer<T> where T: io::Read {
                     }
                 },
                 None => {
-                    return Err(SyntaxErr{
+                    return Err(TokenErr{
                         text:"While parsing keyword."
                     })
                 }
@@ -125,7 +71,7 @@ impl<T> Tokenizer<T> where T: io::Read {
         Token::String(collection)
     }
 
-    fn read_string(&mut self, closing: u8) -> Result<Token, SyntaxErr> {
+    fn read_string(&mut self, closing: u8) -> Result<Token, TokenErr> {
         let mut collection = vec![];
         let mut last_byte = self.reader.get().unwrap();
         collection.push(last_byte);
@@ -139,7 +85,7 @@ impl<T> Tokenizer<T> where T: io::Read {
                 }
                 last_byte = item;
             }else{
-                return Err(SyntaxErr{
+                return Err(TokenErr{
                     text: "Unclosed string."
                 })
             }
@@ -147,12 +93,12 @@ impl<T> Tokenizer<T> where T: io::Read {
         Ok(Token::String(collection))
     }
 
-    fn singular(&mut self, token: Token) -> Result<Option<Token>, SyntaxErr> {
+    fn singular(&mut self, token: Token) -> Result<Option<Token>, TokenErr> {
         self.reader.increment_index();
         Ok(Some(token))
     }
     
-    pub fn token(&mut self) -> Result<Option<Token>, SyntaxErr> {
+    pub fn token(&mut self) -> Result<Option<Token>, TokenErr> {
         match self.reader.peek() {
             Some(closing @ b'"') |
             Some(closing @ b'\'') => {
@@ -200,13 +146,13 @@ impl<T> Tokenizer<T> where T: io::Read {
         }
     }
 
-    fn comment(&mut self) -> Result<Option<Token>, SyntaxErr> {
+    fn comment(&mut self) -> Result<Option<Token>, TokenErr> {
         let mut collection = vec![];
         loop {
             let cr = self.reader.get();
             // eof
             if cr.is_none() {
-                return Err(SyntaxErr{
+                return Err(TokenErr{
                     text: "Incomplete multi-line comment."
                 });
             }
