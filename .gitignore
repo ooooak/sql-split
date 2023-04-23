@@ -12,3 +12,4 @@ Cargo.lock
 
 
 /example-files/output/*.sql
+/resources/db/*
