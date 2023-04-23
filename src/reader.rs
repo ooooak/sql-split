@@ -2,9 +2,9 @@ use std::io::{BufReader};
 use std::io::prelude::*;
 use std::io;
 
-const DEFAULT_BUF_SIZE: usize = 8 * 1024;
+const DEFAULT_BUF_SIZE: usize = 16 * 1024;
 
-pub struct Reader<T>{
+pub struct Reader<T> {
     buffer: [u8; DEFAULT_BUF_SIZE],
     pos: usize,
     reader: BufReader<T>,
@@ -13,7 +13,6 @@ pub struct Reader<T>{
 
 impl<T> Reader<T> where T: io::Read {
     pub fn new(file: T) -> Self {
-        // reader
         let mut reader = Self {
             buffer: [0; DEFAULT_BUF_SIZE],
             reader: BufReader::new(file),
@@ -21,57 +20,40 @@ impl<T> Reader<T> where T: io::Read {
             bytes_read: 0,
         };
 
-        reader.read_buf();
+        reader.fill_buffer();
         reader
     }
 
-    #[inline(always)]
-    fn raw_get(&mut self) -> Option<u8> {
-        if self.bytes_read == 0 {
-            return None
-        }
+    fn fill_buffer(&mut self) {
+        self.bytes_read = self.reader.read(&mut self.buffer).unwrap_or(0);
+        self.pos = 0; // reset index
+    }
 
-        if let Some(item) = self.buffer.get(self.pos) {
-            return if self.bytes_read <= self.pos {
-                None
-            }else{
-                Some(*item)
+    fn get_current_byte(&mut self) -> Option<u8> {
+        if self.pos >= self.bytes_read {
+            self.fill_buffer();
+            if self.bytes_read == 0 {
+                return None;
             }
         }
-
-        // out of index load next buffer
-        self.read_buf();
-        self.raw_get()
+        Some(self.buffer[self.pos])
     }
 
     pub fn get(&mut self) -> Option<u8> {
-        let byte = self.raw_get();
+        let byte = self.get_current_byte();
         self.pos += 1;
         byte
     }
 
     pub fn peek(&mut self) -> Option<u8> {
-        self.raw_get()
+        self.get_current_byte()
     }
 
     pub fn peek_next(&mut self) -> Option<u8> {
         self.pos += 1;
-        let item = self.raw_get();
+        let byte = self.get_current_byte();
         self.pos -= 1;
-        item
-    }
-
-
-    fn read_buf(&mut self) {
-        match self.reader.read(&mut self.buffer) {
-            Ok(size) => {
-                self.bytes_read = size;
-                self.pos = 0; // reset index
-            },
-            Err(err) => {
-                panic!("{:?}", err);
-            }
-        }
+        byte
     }
 
     pub fn increment_index(&mut self){
