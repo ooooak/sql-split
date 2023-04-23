@@ -278,7 +278,7 @@ mod reader_test{
 
         // create table
         let (state, msg) = valid_block(parser.token_stream());
-        assert!(state, msg);
+        assert!(state, "{}", msg);
 
         // white space or line feed
         assert!(is_space(parser.token_stream()), "white space");
@@ -288,13 +288,13 @@ mod reader_test{
 
         // insert
         let (state, msg) = valid_insert(parser.token_stream());
-        assert!(state, msg);
+        assert!(state, "{}", msg);
 
         assert!(is_space(parser.token_stream()), "white space");
         assert!(is_space(parser.token_stream()), "white space");
 
         let (state, msg) = valid_insert(parser.token_stream());
-        assert!(state, msg);
+        assert!(state, "{}", msg);
 
         // line feeds
         assert!(is_space(parser.token_stream()), "white space");
@@ -304,7 +304,7 @@ mod reader_test{
 
         // set FOREIGN_KEY_CHECKS block
         let (state, msg) = valid_block(parser.token_stream());
-        assert!(state, msg);
+        assert!(state, "{}", msg);
         
         // line feed
         assert!(is_space(parser.token_stream()), "white space");
@@ -314,7 +314,7 @@ mod reader_test{
 
         // create table block
         let (state, msg) = valid_block(parser.token_stream());
-        assert!(state, msg);
+        assert!(state, "{}", msg);
 
         // line feed
         assert!(is_space(parser.token_stream()), "white space");
@@ -324,11 +324,11 @@ mod reader_test{
 
         // insert 
         let (state, msg) = valid_insert(parser.token_stream());
-        assert!(state, msg);
+        assert!(state, "{}", msg);
 
         // value tuple
         let (state, msg) = valid_values_tuple(parser.token_stream());
-        assert!(state, msg);
+        assert!(state, "{}", msg);
     }
 
 
