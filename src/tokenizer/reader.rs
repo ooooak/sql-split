@@ -25,7 +25,6 @@ impl<T> Reader<T> where T: io::Read {
         reader
     }
 
-    #[inline(always)]
     fn raw_get(&mut self) -> Option<u8> {
         if self.bytes_read == 0 {
             return None
