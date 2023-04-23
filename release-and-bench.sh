@@ -1,8 +1,2 @@
-cargo build --release
-
-cp ./target/release/sql-split resources/db/sql-split
-
-cd resources/db;
-
-./sql-split ./database.sql --output 100mb
+cargo flamegraph --release -- ./resources/test_files/Sample-SQL-File-500000-Rows.sql --output 1mb
 
