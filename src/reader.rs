@@ -6,7 +6,7 @@ const DEFAULT_BUF_SIZE: usize = 8 * 1024;
 
 pub struct Reader<T>{
     buffer: [u8; DEFAULT_BUF_SIZE],
-    index: usize,
+    pos: usize,
     reader: BufReader<T>,
     bytes_read: usize,
 }
@@ -17,7 +17,7 @@ impl<T> Reader<T> where T: io::Read {
         let mut reader = Self {
             buffer: [0; DEFAULT_BUF_SIZE],
             reader: BufReader::new(file),
-            index: 0,
+            pos: 0,
             bytes_read: 0,
         };
 
@@ -31,8 +31,8 @@ impl<T> Reader<T> where T: io::Read {
             return None
         }
 
-        if let Some(item) = self.buffer.get(self.index) {
-            return if self.bytes_read <= self.index {
+        if let Some(item) = self.buffer.get(self.pos) {
+            return if self.bytes_read <= self.pos {
                 None
             }else{
                 Some(*item)
@@ -46,7 +46,7 @@ impl<T> Reader<T> where T: io::Read {
 
     pub fn get(&mut self) -> Option<u8> {
         let byte = self.raw_get();
-        self.index += 1;
+        self.pos += 1;
         byte
     }
 
@@ -55,9 +55,9 @@ impl<T> Reader<T> where T: io::Read {
     }
 
     pub fn peek_next(&mut self) -> Option<u8> {
-        self.index += 1;
+        self.pos += 1;
         let item = self.raw_get();
-        self.index -= 1;
+        self.pos -= 1;
         item
     }
 
@@ -66,7 +66,7 @@ impl<T> Reader<T> where T: io::Read {
         match self.reader.read(&mut self.buffer) {
             Ok(size) => {
                 self.bytes_read = size;
-                self.index = 0; // reset index
+                self.pos = 0; // reset index
             },
             Err(err) => {
                 panic!("{:?}", err);
@@ -75,7 +75,7 @@ impl<T> Reader<T> where T: io::Read {
     }
 
     pub fn increment_index(&mut self){
-        self.index += 1;
+        self.pos += 1;
     }
 }
 
