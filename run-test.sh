@@ -1,1 +1,1 @@
-cargo run ./resources/db/database.sql --output 100mb
+cargo run ./resources/test_db/small.sql --output 1mb

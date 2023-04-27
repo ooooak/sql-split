@@ -15,7 +15,6 @@ pub enum TokenStream {
     SpaceOrLineFeed(Vec<u8>),
 }
 
-
 pub struct Parser<T> {
     tokenizer: Tokenizer<T>,
 }
@@ -195,7 +194,7 @@ impl<T> Parser<T> where T: io::Read{
     }
 }
 
-
+#[allow(dead_code)]
 fn print_stream(result: Result<Option<TokenStream>, TokenErr>) {
     use parser::parser::TokenStream::*;
     match result {
@@ -287,13 +286,19 @@ mod reader_test{
     
     #[test]
     fn tokenizer(){
-        let file = File::open("./resources/db/1.sql").unwrap();
+        let file = File::open("./resources/test_db/small.sql").unwrap();
         let tokenizer = Tokenizer::new(Reader::new(file));
-        
         let mut parser = Parser::new(tokenizer);
-        // loop {
-        //     print_stream(parser.token_stream());
-        // }
+
+        loop {
+            let stream = parser.token_stream();
+            match stream {
+                Ok(Some(_)) => {
+                    print_stream(stream);
+                },
+                _ => break,
+            }
+        }
                 
         // inline comment
         // assert!(is_comment(parser.token_stream()), "Expecting a comment");
