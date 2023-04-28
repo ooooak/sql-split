@@ -36,5 +36,7 @@ CREATE TABLE IF NOT EXISTS `access_tokens` (
   CONSTRAINT `access_tokens_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `site_users` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=332 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT INTO `tokens` (`id`, `user_id`, `access_token`, `created_at`, `updated_at`) VALUES
-	(1, 1, ' token=\'gg("")\' ', ''),(2, 1, '', '', '');
+INSERT INTO `tokens` 
+  (`id`, `user_id`, `access_token`, `created_at`, `updated_at`) 
+VALUES
+  (1, 1, ' token=\'gg("")\' ', ''),(2, 1, '', '', '');
