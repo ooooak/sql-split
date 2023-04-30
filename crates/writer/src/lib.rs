@@ -3,90 +3,35 @@ use std::io::{
     Read,
 };
 
-pub mod reader;
-
-const DEFAULT_BUF_SIZE: usize = 1024;
-
-pub struct Reader<T> {
-    pub cursor: usize,
-    buffer: [u8; DEFAULT_BUF_SIZE],
-    bytes_read: usize,
-    reader: BufReader<T>,
+pub struct Writer {
+    max_file_size: usize,
+    bytes_written: usize,
+    output_dir: String,
+    cache: String,
 }
 
-pub fn is_eof(b: u8) -> bool {
-    return b == 0
+pub fn create_file(path: Path) {
+    match File::create(&path).unwrap {
+        Err(why) => {
+            panic!("couldn't create {}: {}", display, why)
+        },
+        Ok(file) => file,
+    };
 }
 
-impl<T> Reader<T> where T: Read {
-    pub fn new(file: T) -> Self {
-        // reader
-        let mut reader = Self {
-            buffer: [0; DEFAULT_BUF_SIZE],
-            reader: BufReader::new(file),
-            cursor: 0,
-            bytes_read: 0,
+impl Writer {
+    pub fn new(max_file_size: usize) {
+        // Path::new("output.txt")
+
+    
+        let content = "This is some text we want to write to the file.";
+    
+        match file.write_all(content.as_bytes()) {
+            Err(why) => panic!("couldn't write to {}: {}", display, why),
+            Ok(_) => println!("successfully wrote to {}", display),
         };
-
-        reader.fill_buf();
-        reader
     }
 
-    fn fill_buf(&mut self)  {
-        match self.reader.read(&mut self.buffer) {
-            Ok(size) => {
-                self.bytes_read = size;
-                self.cursor = 0;
-            },
-            Err(e) => panic!("{:}", e),
-        }
-    }
-
-    fn read_byte(&mut self) -> u8 {
-        if self.bytes_read == 0 {
-            // reached EOF
-            return 0
-        }
-        
-        // println!("cursor: {}, bytes_read: {}", self.cursor, self.bytes_read);
-        if self.cursor < self.bytes_read {
-            let byte = self.buffer.get(self.cursor).unwrap();
-            return *byte;
-        }
-
-        // read next chunk of buffer
-        self.fill_buf(); 
-        self.read_byte()
-    }
-
-    pub fn get(&mut self) -> u8 {
-        let byte = self.read_byte();
-        self.cursor += 1;
-        byte
-    }
-
-    pub fn peek(&mut self) -> u8  {
-        self.read_byte()
-    }
-
-    pub fn peek_next(&mut self) -> u8  {
-        self.cursor += 1;
-        let item = self.read_byte();
-        self.cursor -= 1;
-        item
-    }
-
-    pub fn peek_n(&mut self) -> u8  {
-        self.cursor += 1;
-        let item = self.read_byte();
-        self.cursor -= 1;
-        item
-    }
-
-
-    pub fn increment_cursor(&mut self) {
-        self.cursor += 1;
-    }
 }
 
 
@@ -156,6 +101,4 @@ mod reader_test{
         assert_eq!(reader.peek(), b'3');
         assert_eq!(reader.peek_next(), b'4');
     }
-
-
 }

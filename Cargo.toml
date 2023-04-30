@@ -2,9 +2,7 @@
 resolver = "2"
 members = [
     "crates/reader",
-    "crates/parser",
-    "crates/tokenizer",
-    "crates/cli",
+    "crates/sprinkler",
 ]
 
 [workspace.package]
@@ -13,6 +11,7 @@ rust-version = "1.66.0"
 
 [workspace.dependencies]
 reader = { path = "crates/reader" }
-parser = { path = "crates/parser" }
-tokenizer = { path = "crates/tokenizer" }
-cli = { path = "crates/cli" }
+sprikles = { path = "crates/sprikles" }
+# parser = { path = "crates/parser" }
+# tokenizer = { path = "crates/tokenizer" }
+# cli = { path = "crates/cli" }

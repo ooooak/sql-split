@@ -1,91 +1,62 @@
-use std::io::{
-    BufReader,
-    Read,
-};
-
-pub mod reader;
-
-const DEFAULT_BUF_SIZE: usize = 1024;
+use std::io::{BufReader, Read, Seek, SeekFrom};
 
 pub struct Reader<T> {
-    pub cursor: usize,
-    buffer: [u8; DEFAULT_BUF_SIZE],
-    bytes_read: usize,
     reader: BufReader<T>,
 }
 
 pub fn is_eof(b: u8) -> bool {
-    return b == 0
+    b == 0
 }
 
-impl<T> Reader<T> where T: Read {
+impl<T> Reader<T>
+where
+    T: Read + Seek,
+{
     pub fn new(file: T) -> Self {
-        // reader
-        let mut reader = Self {
-            buffer: [0; DEFAULT_BUF_SIZE],
+        Self {
             reader: BufReader::new(file),
-            cursor: 0,
-            bytes_read: 0,
-        };
-
-        reader.fill_buf();
-        reader
+        }
     }
 
-    fn fill_buf(&mut self)  {
-        match self.reader.read(&mut self.buffer) {
-            Ok(size) => {
-                self.bytes_read = size;
-                self.cursor = 0;
+    fn read_byte(&mut self, buff_size: usize) -> &[u8] {
+        let mut byte = [0; buff_size];
+        match self.reader.read(&mut byte) {
+            Ok(0) => &[0], // reached EOF
+            Ok(_) => byte,
+            Err(e) => {
+                panic!("{:}", e)
             },
-            Err(e) => panic!("{:}", e),
         }
-    }
-
-    fn read_byte(&mut self) -> u8 {
-        if self.bytes_read == 0 {
-            // reached EOF
-            return 0
-        }
-        
-        // println!("cursor: {}, bytes_read: {}", self.cursor, self.bytes_read);
-        if self.cursor < self.bytes_read {
-            let byte = self.buffer.get(self.cursor).unwrap();
-            return *byte;
-        }
-
-        // read next chunk of buffer
-        self.fill_buf(); 
-        self.read_byte()
     }
 
     pub fn get(&mut self) -> u8 {
         let byte = self.read_byte();
-        self.cursor += 1;
+        self.reader.seek(SeekFrom::Current(0)).unwrap();
         byte
     }
 
-    pub fn peek(&mut self) -> u8  {
-        self.read_byte()
+    pub fn peek(&mut self) -> u8 {
+        let byte = self.read_byte();
+        self.reader.seek(SeekFrom::Current(-1)).unwrap();
+        byte
     }
 
-    pub fn peek_next(&mut self) -> u8  {
-        self.cursor += 1;
-        let item = self.read_byte();
-        self.cursor -= 1;
-        item
+    pub fn peek_next(&mut self) -> u8 {
+        self.reader.seek(SeekFrom::Current(1)).unwrap();
+        let byte = self.read_byte();
+        self.reader.seek(SeekFrom::Current(-2)).unwrap();
+        byte
     }
 
-    pub fn peek_n(&mut self) -> u8  {
-        self.cursor += 1;
-        let item = self.read_byte();
-        self.cursor -= 1;
-        item
+    pub fn peek_n(&mut self) -> u8 {
+        self.reader.seek(SeekFrom::Current(1)).unwrap();
+        let byte = self.read_byte();
+        self.reader.seek(SeekFrom::Current(-2)).unwrap();
+        byte
     }
-
 
     pub fn increment_cursor(&mut self) {
-        self.cursor += 1;
+        self.reader.seek(SeekFrom::Current(1)).unwrap();
     }
 }
 
@@ -94,13 +65,6 @@ impl<T> Reader<T> where T: Read {
 mod reader_test{
     use super::*;
     use std::fs::File;
-
-    #[test]
-    fn empty_file(){
-        let file = File::open("../../resources/test_files/empty.sql").unwrap();
-        let mut reader = Reader::new(file);
-        assert_eq!(reader.get(), 0);
-    }
 
     #[test]
     fn get(){
