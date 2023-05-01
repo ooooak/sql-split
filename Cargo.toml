@@ -1,11 +1,8 @@
-[package]
-name = "sql-split"
-version = "0.1.0"
-authors = ["Ak <akshay.deep0@gmail.com>"]
+[workspace]
+resolver = "2"
+members = [
+  "sql-split-cli"
+]
 
-[dependencies]
-clap={version="2", features=["yaml"]}
-flamegraph = "0.6.2"
-
-[profile.release]
-debug = true
+[workspace.dependencies]
+sql-split-cli = { path = "sql-split-cli" }
