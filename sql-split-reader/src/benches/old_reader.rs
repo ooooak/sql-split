@@ -1,23 +1,22 @@
-use std::io::{Read, Seek, SeekFrom};
-use std::fs::File;
+use std::io::{BufReader, Seek, Read, SeekFrom};
 
 // const DEFAULT_BUF_SIZE: usize = 5;
-const DEFAULT_BUF_SIZE: usize = 8 * 1024;
+const DEFAULT_BUF_SIZE: usize = 1024;
 
-pub struct Reader {
+pub struct Reader<T>{
     buffer: [u8; DEFAULT_BUF_SIZE],
-    cursor: usize,
-    file: File,
+    index: usize,
+    reader: BufReader<T>,
     bytes_read: usize,
 }
 
-impl Reader {
-    pub fn new(file: File) -> Self {
+impl<T> Reader<T> where T: Seek + Read {
+    pub fn new(file: T) -> Self {
         // reader
         let mut reader = Self {
             buffer: [0; DEFAULT_BUF_SIZE],
-            file,
-            cursor: 0,
+            reader: BufReader::new(file),
+            index: 0,
             bytes_read: 0,
         };
 
@@ -25,74 +24,62 @@ impl Reader {
         reader
     }
 
-    #[inline(always)]
     pub fn get(&mut self) -> Option<u8> {
-        let byte = self.peek();
-        self.cursor += 1;
+        let byte = self.read_byte();
+        self.index += 1;
         byte
     }
 
+    pub fn peek(&mut self) -> Option<u8> {
+        self.read_byte()
+    }
+
     pub fn peek_next(&mut self) -> Option<u8> {
-        if self.next_in_current_buff() {
-            self.peek_next_from_buff()
+        println!("{:?}, {:?}", self.index+1, self.bytes_read);
+        if (self.index+1) < self.bytes_read {
+            self.index += 1;
+            let item = self.read_byte();
+            self.index -= 1;
+            item
         } else {
-            self.peek_next_from_file()
+            let mut chunk = [0; 1];
+            let _ = self.reader.seek(SeekFrom::Current(1)); // move ahead
+            self.reader.read(&mut chunk).expect("unable to read buff");
+            println!("{:?}", chunk);
+            let _ = self.reader.seek(SeekFrom::Current(-2)); // move back
+            return Some(chunk[0])
         }
     }
 
-    #[inline(always)]
-    pub fn increment_cursor(&mut self) {
-        self.cursor += 1;
+    pub fn increment_index(&mut self){
+        self.index += 1;
     }
 
-    #[inline(always)]
-    pub fn peek(&mut self) -> Option<u8> {
+    fn read_byte(&mut self) -> Option<u8> {
         if self.bytes_read == 0 {
             return None
         }
 
-        if self.cursor < self.bytes_read {
-            let byte = self.buffer.get(self.cursor).unwrap();
+        if self.index < self.bytes_read {
+            let byte = self.buffer.get(self.index).unwrap();
             return Some(*byte)
         }
 
         // out of index load next buffer
         self.fill_buf();
-
-        self.peek()
-    }
-
-    fn next_in_current_buff(&self) -> bool {
-        (self.cursor + 1) < self.bytes_read 
+        self.read_byte()
     }
 
     fn fill_buf(&mut self) {
-        let size = self.file.read(&mut self.buffer).expect("unable to read buffer");
-        self.bytes_read = size;
-        self.cursor = 0;
-    }
-
-    fn peek_next_from_file(&mut self) -> Option<u8> {
-        let mut tmp_buff = [0; 1];
-
-        // move ahead
-        let _ = self.file.seek(SeekFrom::Current(1)); 
-        let read = self.file.read(&mut tmp_buff).expect("unable to read buff");
-        if read == 0 {
-            let _ = self.file.seek(SeekFrom::Current(-1)); 
-            return None
+        match self.reader.read(&mut self.buffer) {
+            Ok(size) => {
+                self.bytes_read = size;
+                self.index = 0; // reset index
+            },
+            Err(err) => {
+                panic!("{:?}", err);
+            }
         }
-
-        // move back
-        let _ = self.file.seek(SeekFrom::Current(-2)); 
-        Some(tmp_buff[0])
-    }
-
-    fn peek_next_from_buff(&mut self) -> Option<u8> {
-        self.cursor += 1;
-        let item = self.peek();
-        self.cursor -= 1;
-        item
     }
 }
 
@@ -104,14 +91,14 @@ mod reader_test{
 
     #[test]
     fn empty_file(){
-        let file = File::open("../resources/test_db/empty.sql").unwrap();
+        let file = File::open("./resources/test_db/empty.sql").unwrap();
         let mut reader = Reader::new(file);
         assert_eq!(reader.get(), None);
     }
 
     #[test]
     fn get(){
-        let file = File::open("../resources/test_db/content.sql").unwrap();
+        let file = File::open("./resources/test_db/content.sql").unwrap();
         let mut reader = Reader::new(file);
         
         assert_eq!(reader.get(), Some(b'1'));
@@ -136,7 +123,7 @@ mod reader_test{
 
     #[test]
     fn peek(){
-        let file = File::open("../resources/test_db/content.sql").unwrap();
+        let file = File::open("./resources/test_db/content.sql").unwrap();
         let mut reader = Reader::new(file);
         assert_eq!(reader.peek(), Some(b'1'));
         let _skip_it = reader.get();
@@ -146,7 +133,7 @@ mod reader_test{
 
     #[test]
     fn peek_next(){
-        let file = File::open("../resources/test_db/content.sql").unwrap();
+        let file = File::open("./resources/test_db/content.sql").unwrap();
         let mut reader = Reader::new(file);
         assert_eq!(reader.peek_next(), Some(b'2'));
         assert_eq!(reader.get(), Some(b'1'));

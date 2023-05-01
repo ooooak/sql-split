@@ -1,3 +1,5 @@
+mod old_reader;
+use old_reader::Reader as OReader;
 use sql_split_reader::Reader;
 use criterion::{
     criterion_group, 
@@ -13,7 +15,9 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let file = File::open("../resources/test_db/big.sql").unwrap();
         let mut reader = Reader::new(file);
         loop {
-            if reader.get() == Some(0) {
+            reader.peek();
+            reader.get();
+            if reader.peek() == None {
                 break;
             }
         }
