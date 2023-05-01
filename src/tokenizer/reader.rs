@@ -2,7 +2,7 @@ use std::io::{BufReader};
 use std::io::prelude::*;
 use std::io;
 
-const DEFAULT_BUF_SIZE: usize = 8 * 1024;
+const DEFAULT_BUF_SIZE: usize = 1024;
 
 pub struct Reader<T>{
     buffer: [u8; DEFAULT_BUF_SIZE],
@@ -86,14 +86,14 @@ mod reader_test{
 
     #[test]
     fn empty_file(){
-        let file = File::open("./resources/test_files/empty.txt").unwrap();
+        let file = File::open("./resources/test_db/empty.sql").unwrap();
         let mut reader = Reader::new(file);
         assert_eq!(reader.get(), None);
     }
 
     #[test]
     fn get(){
-        let file = File::open("./resources/test_files/content.txt").unwrap();
+        let file = File::open("./resources/test_db/content.sql").unwrap();
         let mut reader = Reader::new(file);
         
         assert_eq!(reader.get(), Some(b'1'));
@@ -112,7 +112,7 @@ mod reader_test{
 
     #[test]
     fn peek(){
-        let file = File::open("./resources/test_files/content.txt").unwrap();
+        let file = File::open("./resources/test_db/content.sql").unwrap();
         let mut reader = Reader::new(file);
         assert_eq!(reader.peek(), Some(b'1'));
         let _skip_it = reader.get();
@@ -122,7 +122,7 @@ mod reader_test{
 
     #[test]
     fn peek_next(){
-        let file = File::open("./resources/test_files/content.txt").unwrap();
+        let file = File::open("./resources/test_db/content.sql").unwrap();
         let mut reader = Reader::new(file);
         assert_eq!(reader.peek_next(), Some(b'2'));
         assert_eq!(reader.get(), Some(b'1'));
