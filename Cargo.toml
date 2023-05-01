@@ -1,8 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
-  "sql-split-cli"
+  "sql-split-cli",
+  "sql-split-reader"
 ]
 
 [workspace.dependencies]
 sql-split-cli = { path = "sql-split-cli" }
+sql-split-reader = { path = "sql-split-reader" }
