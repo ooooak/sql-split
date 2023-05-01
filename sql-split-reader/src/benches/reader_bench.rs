@@ -10,24 +10,14 @@ use std::fs::{
 
 pub fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("get large file", |b| b.iter(|| {
-        let file = File::open("../resources/test_files/big.sql").unwrap();
+        let file = File::open("../resources/test_db/big.sql").unwrap();
         let mut reader = Reader::new(file);
-        // loop {
-        //     if reader.get() == Some(0) {
-        //         break;
-        //     }
-        // }
+        loop {
+            if reader.get() == Some(0) {
+                break;
+            }
+        }
     }));
-
-    // c.bench_function("get large file", |b| b.iter(|| {
-    //     let file = File::open("../../resources/test_files/big.sql").unwrap();
-    //     let mut reader = Reader::new(file);
-    //     loop {
-    //         if reader.get() == Some(0) {
-    //             break;
-    //         }
-    //     }
-    // }));
 }
 
 criterion_group!(benches, criterion_benchmark);
