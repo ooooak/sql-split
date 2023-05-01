@@ -1,5 +1,5 @@
 use tokenizer::reader::Reader;
-use std::io;
+use std::io::{Seek, Read};
 use tokenizer::token::Token;
 use tokenizer::token_err::TokenErr;
 
@@ -7,7 +7,7 @@ pub struct Tokenizer<T> {
     reader: Reader<T>,
 }
 
-impl<T> Tokenizer<T> where T: io::Read {
+impl<T> Tokenizer<T> where T: Seek + Read {
     pub fn new(reader: Reader<T>) -> Self {
         Self {reader}
     }

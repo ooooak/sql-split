@@ -19,7 +19,7 @@ pub struct Parser<T> {
     tokenizer: Tokenizer<T>,
 }
 
-impl<T> Parser<T> where T: io::Read{
+impl<T> Parser<T> where T: io::Read + io::Seek {
     pub fn new(tokenizer: Tokenizer<T>) -> Self {
         Self { tokenizer }
     }
