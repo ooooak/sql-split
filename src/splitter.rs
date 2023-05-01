@@ -43,7 +43,7 @@ pub enum SplitterState{
     Done,
 }
 
-impl<T> Splitter<T> where T: io::Read {
+impl<T> Splitter<T> where T: io::Read + io::Seek {
     pub fn new(settings: SplitterSettings<T>) -> Self {
         let tokenizer = Tokenizer::new(Reader::new(settings.file));
         Self {
