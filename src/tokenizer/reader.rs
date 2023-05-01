@@ -1,5 +1,6 @@
 use std::io::{BufReader, Seek, Read, SeekFrom};
 
+// const DEFAULT_BUF_SIZE: usize = 5;
 const DEFAULT_BUF_SIZE: usize = 1024;
 
 pub struct Reader<T>{
@@ -34,18 +35,19 @@ impl<T> Reader<T> where T: Seek + Read {
     }
 
     pub fn peek_next(&mut self) -> Option<u8> {
+        println!("{:?}, {:?}", self.index+1, self.bytes_read);
         if (self.index+1) < self.bytes_read {
             self.index += 1;
             let item = self.read_byte();
             self.index -= 1;
             item
         } else {
-            let b = self.reader.seek(SeekFrom::Current(1)).unwrap();
-            let b = Some(b as u8);
-            let _ = self.reader.seek(SeekFrom::Current(-1));
-            return b
-
-            // unimplemented!()
+            let mut chunk = [0; 1];
+            let _ = self.reader.seek(SeekFrom::Current(1)); // move ahead
+            self.reader.read(&mut chunk).expect("unable to read buff");
+            println!("{:?}", chunk);
+            let _ = self.reader.seek(SeekFrom::Current(-2)); // move back
+            return Some(chunk[0])
         }
     }
 
@@ -103,13 +105,13 @@ mod reader_test{
         assert_eq!(reader.get(), Some(b'2'));
         assert_eq!(reader.get(), Some(b'3'));
         assert_eq!(reader.get(), Some(b'4'));
-        println!("{:?}", reader.peek_next());
+        println!("{:?}", char::from_u32(reader.peek_next().unwrap() as u32));
 
         assert_eq!(reader.get(), Some(b'5'));
-        println!("{:?}", reader.peek_next());
+        println!("{:?}", char::from_u32(reader.peek_next().unwrap() as u32));
 
         assert_eq!(reader.get(), Some(b'6'));
-        println!("{:?}", reader.peek_next());
+        println!("{:?}", char::from_u32(reader.peek_next().unwrap() as u32));
 
         assert_eq!(reader.get(), Some(b'7'));
         assert_eq!(reader.get(), Some(b'8'));

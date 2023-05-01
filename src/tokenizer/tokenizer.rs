@@ -7,7 +7,7 @@ pub struct Tokenizer<T> {
     reader: Reader<T>,
 }
 
-impl<T> Tokenizer<T> where T: Seek + Read{
+impl<T> Tokenizer<T> where T: Seek + Read {
     pub fn new(reader: Reader<T>) -> Self {
         Self {reader}
     }
