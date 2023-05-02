@@ -1,15 +1,15 @@
-use parser::parser::TokenStream;
-use parser::parser::Parser;
-use tokenizer::{
+use sql_split_reader::Reader;
+
+use crate::parser::parser::TokenStream;
+use crate::parser::parser::Parser;
+use crate::tokenizer::{
     tokenizer::Tokenizer, 
     token_err::TokenErr, 
-    reader::Reader
 };
-use std::io;
 
-pub struct SplitterSettings<T>{
+pub struct SplitterSettings{
     pub write: usize,
-    pub file: T,
+    pub file: std::fs::File,
 }
 
 
@@ -28,8 +28,8 @@ impl std::fmt::Display for FileState {
     }
 }
 
-pub struct Splitter<T>{
-    parser: Parser<T>,
+pub struct Splitter {
+    parser: Parser,
     total_bytes: usize,
     max_write_size:usize,
     last_insert: Vec<u8>,
@@ -43,8 +43,8 @@ pub enum SplitterState{
     Done,
 }
 
-impl<T> Splitter<T> where T: io::Read + io::Seek {
-    pub fn new(settings: SplitterSettings<T>) -> Self {
+impl Splitter {
+    pub fn new(settings: SplitterSettings) -> Self {
         let tokenizer = Tokenizer::new(Reader::new(settings.file));
         Self {
             parser: Parser::new(tokenizer),

@@ -35,7 +35,6 @@ impl<T> Reader<T> where T: Seek + Read {
     }
 
     pub fn peek_next(&mut self) -> Option<u8> {
-        println!("{:?}, {:?}", self.index+1, self.bytes_read);
         if (self.index+1) < self.bytes_read {
             self.index += 1;
             let item = self.read_byte();
@@ -45,7 +44,6 @@ impl<T> Reader<T> where T: Seek + Read {
             let mut chunk = [0; 1];
             let _ = self.reader.seek(SeekFrom::Current(1)); // move ahead
             self.reader.read(&mut chunk).expect("unable to read buff");
-            println!("{:?}", chunk);
             let _ = self.reader.seek(SeekFrom::Current(-2)); // move back
             return Some(chunk[0])
         }

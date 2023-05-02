@@ -1,11 +1,14 @@
 [package]
-name = "sql-split"
-version = "0.1.0"
-authors = ["Ak <akshay.deep0@gmail.com>"]
+name = "sql-split-cli"
+version = {workspace=true}
+edition = {workspace=true}
+authors = {workspace=true}
 
 [dependencies]
+sql-split-reader={workspace=true}
 clap={version="2", features=["yaml"]}
 flamegraph = "0.6.2"
 
 [profile.release]
 debug = true
+

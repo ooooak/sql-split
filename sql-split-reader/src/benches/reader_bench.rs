@@ -1,5 +1,3 @@
-mod old_reader;
-use old_reader::Reader as OReader;
 use sql_split_reader::Reader;
 use criterion::{
     criterion_group, 

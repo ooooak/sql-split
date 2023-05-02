@@ -1,14 +1,13 @@
-use tokenizer::reader::Reader;
-use std::io::{Seek, Read};
-use tokenizer::token::Token;
-use tokenizer::token_err::TokenErr;
+use sql_split_reader::Reader;
+use crate::tokenizer::token::Token;
+use crate::tokenizer::token_err::TokenErr;
 
-pub struct Tokenizer<T> {
-    reader: Reader<T>,
+pub struct Tokenizer {
+    reader: Reader,
 }
 
-impl<T> Tokenizer<T> where T: Seek + Read {
-    pub fn new(reader: Reader<T>) -> Self {
+impl Tokenizer {
+    pub fn new(reader: Reader) -> Self {
         Self {reader}
     }
 
