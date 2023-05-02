@@ -12,3 +12,4 @@ $ sql-split.exe file.sql --output=200mb
 
 #### build
 > cargo build --release
+
