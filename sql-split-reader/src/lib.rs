@@ -41,7 +41,7 @@ impl Reader {
     }
 
     #[inline(always)]
-    pub fn increment_cursor(&mut self) {
+    pub fn increment_index(&mut self) {
         self.cursor += 1;
     }
 

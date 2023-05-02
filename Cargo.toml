@@ -8,3 +8,9 @@ members = [
 [workspace.dependencies]
 sql-split-cli = { path = "sql-split-cli" }
 sql-split-reader = { path = "sql-split-reader" }
+
+
+[workspace.package]
+version = "0.1.1"
+edition = "2021"
+authors = ["Akshay Deep Giri <akshay.deep0@gmail.com>"]

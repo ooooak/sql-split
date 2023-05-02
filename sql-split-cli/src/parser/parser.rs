@@ -1,10 +1,8 @@
-use std::io;
-use tokenizer::{
+use crate::tokenizer::{
     token_err::TokenErr,
     token::Token,
     tokenizer::Tokenizer
 };
-
 
 #[derive(Debug,PartialEq)]
 pub enum TokenStream {
@@ -15,12 +13,12 @@ pub enum TokenStream {
     SpaceOrLineFeed(Vec<u8>),
 }
 
-pub struct Parser<T> {
-    tokenizer: Tokenizer<T>,
+pub struct Parser {
+    tokenizer: Tokenizer,
 }
 
-impl<T> Parser<T> where T: io::Read + io::Seek {
-    pub fn new(tokenizer: Tokenizer<T>) -> Self {
+impl Parser {
+    pub fn new(tokenizer: Tokenizer) -> Self {
         Self { tokenizer }
     }
     
@@ -194,25 +192,6 @@ impl<T> Parser<T> where T: io::Read + io::Seek {
     }
 }
 
-#[allow(dead_code)]
-fn print_stream(result: Result<Option<TokenStream>, TokenErr>) {
-    use parser::parser::TokenStream::*;
-    match result {
-        Err(e) => println!("{}", e.text),
-        Ok(Some(t)) => {
-            match t {
-                Insert(b, b2) => println!("insert: V1: {:?}, v2: {:?}", String::from_utf8(b), String::from_utf8(b2)),
-                ValuesTuple(b) |
-                Block(b) |
-                Comment(b) |
-                SpaceOrLineFeed(b) => println!("text: {:?}", String::from_utf8(b)) 
-            }
-        },
-        Ok(None) => {
-            println!("none")
-        },
-    }
-}
 
 
 
@@ -220,10 +199,9 @@ fn print_stream(result: Result<Option<TokenStream>, TokenErr>) {
 #[cfg(test)]
 mod reader_test{
     use std::fs::File;
-    use tokenizer::reader::Reader;
-    use tokenizer::tokenizer::Tokenizer;
-    use tokenizer::token_err::TokenErr;
-    use parser::parser::print_stream;
+    use sql_split_reader::Reader;
+    use crate::tokenizer::tokenizer::Tokenizer;
+    use crate::tokenizer::token_err::TokenErr;
 
     use super::Parser;
     use super::TokenStream;
@@ -294,7 +272,7 @@ mod reader_test{
             let stream = parser.token_stream();
             match stream {
                 Ok(Some(_)) => {
-                    print_stream(stream);
+                    // print_stream(stream);
                 },
                 _ => break,
             }
