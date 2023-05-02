@@ -264,83 +264,73 @@ mod reader_test{
     
     #[test]
     fn tokenizer(){
-        let file = File::open("./resources/test_db/small.sql").unwrap();
+        let file = File::open("../resources/test_db/small.sql").unwrap();
         let tokenizer = Tokenizer::new(Reader::new(file));
         let mut parser = Parser::new(tokenizer);
-
-        loop {
-            let stream = parser.token_stream();
-            match stream {
-                Ok(Some(_)) => {
-                    // print_stream(stream);
-                },
-                _ => break,
-            }
-        }
                 
         // inline comment
-        // assert!(is_comment(parser.token_stream()), "Expecting a comment");
-        // assert!(is_comment(parser.token_stream()), "Expecting a comment");
+        assert!(is_comment(parser.token_stream()), "Expecting a comment");
+        assert!(is_comment(parser.token_stream()), "Expecting a comment");
 
         
         // comment ends with "\n"
         // so we only expect one new line 
+        assert!(is_space(parser.token_stream()), "white space");
+        // assert!(is_space(parser.token_stream()), "white space");
+
+        // create table
+        let (state, msg) = valid_block(parser.token_stream());
+        assert!(state, "{}", msg);
+
+        // white space or line feed
+        assert!(is_space(parser.token_stream()), "white space");
+        assert!(is_space(parser.token_stream()), "white space");
         // assert!(is_space(parser.token_stream()), "white space");
         // assert!(is_space(parser.token_stream()), "white space");
 
-        // // create table
-        // let (state, msg) = valid_block(parser.token_stream());
-        // assert!(state, "{}", msg);
+        // insert
+        let (state, msg) = valid_insert(parser.token_stream());
+        assert!(state, "{}", msg);
 
-        // // white space or line feed
-        // assert!(is_space(parser.token_stream()), "white space");
-        // assert!(is_space(parser.token_stream()), "white space");
-        // assert!(is_space(parser.token_stream()), "white space");
+        assert!(is_space(parser.token_stream()), "white space");
         // assert!(is_space(parser.token_stream()), "white space");
 
-        // // insert
-        // let (state, msg) = valid_insert(parser.token_stream());
-        // assert!(state, "{}", msg);
+        let (state, msg) = valid_insert(parser.token_stream());
+        assert!(state, "{}", msg);
 
-        // assert!(is_space(parser.token_stream()), "white space");
-        // assert!(is_space(parser.token_stream()), "white space");
-
-        // let (state, msg) = valid_insert(parser.token_stream());
-        // assert!(state, "{}", msg);
-
-        // // line feeds
-        // assert!(is_space(parser.token_stream()), "white space");
-        // assert!(is_space(parser.token_stream()), "white space");
+        // line feeds
+        assert!(is_space(parser.token_stream()), "white space");
+        assert!(is_space(parser.token_stream()), "white space");
         // assert!(is_space(parser.token_stream()), "white space");
         // assert!(is_space(parser.token_stream()), "white space");
 
-        // // set FOREIGN_KEY_CHECKS block
-        // let (state, msg) = valid_block(parser.token_stream());
-        // assert!(state, "{}", msg);
+        // set FOREIGN_KEY_CHECKS block
+        let (state, msg) = valid_block(parser.token_stream());
+        assert!(state, "{}", msg);
         
-        // // line feed
-        // assert!(is_space(parser.token_stream()), "white space");
-        // assert!(is_space(parser.token_stream()), "white space");
-        // assert!(is_space(parser.token_stream()), "white space");
-        // assert!(is_space(parser.token_stream()), "white space");
-
-        // // create table block
-        // let (state, msg) = valid_block(parser.token_stream());
-        // assert!(state, "{}", msg);
-
-        // // line feed
-        // assert!(is_space(parser.token_stream()), "white space");
-        // assert!(is_space(parser.token_stream()), "white space");
+        // line feed
+        assert!(is_space(parser.token_stream()), "white space");
+        assert!(is_space(parser.token_stream()), "white space");
         // assert!(is_space(parser.token_stream()), "white space");
         // assert!(is_space(parser.token_stream()), "white space");
 
-        // // insert 
-        // let (state, msg) = valid_insert(parser.token_stream());
-        // assert!(state, "{}", msg);
+        // create table block
+        let (state, msg) = valid_block(parser.token_stream());
+        assert!(state, "{}", msg);
 
-        // // value tuple
-        // let (state, msg) = valid_values_tuple(parser.token_stream());
-        // assert!(state, "{}", msg);
+        // line feed
+        assert!(is_space(parser.token_stream()), "white space");
+        assert!(is_space(parser.token_stream()), "white space");
+        // assert!(is_space(parser.token_stream()), "white space");
+        // assert!(is_space(parser.token_stream()), "white space");
+
+        // insert 
+        let (state, msg) = valid_insert(parser.token_stream());
+        assert!(state, "{}", msg);
+
+        // value tuple
+        let (state, msg) = valid_values_tuple(parser.token_stream());
+        assert!(state, "{}", msg);
     }
 
 
