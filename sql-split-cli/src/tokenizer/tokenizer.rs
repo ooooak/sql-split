@@ -10,6 +10,7 @@ impl Tokenizer {
     pub fn new(reader: Reader) -> Self {
         Self {reader}
     }
+
     fn read_till(&mut self, item: u8) -> Result<Vec<u8>, TokenErr> {
         let mut collection = vec![];
         loop {
@@ -102,8 +103,7 @@ impl Tokenizer {
                     Ok(Token::Ignore(b))
                 }
             },
-            b'a'..=b'z' | 
-            b'A'..=b'Z' => {
+            b'a'..=b'z' | b'A'..=b'Z' => {
                 Ok(Token::Keyword(self.keyword()?))
             },
             b'`' => {
@@ -119,24 +119,21 @@ impl Tokenizer {
             b','=> self.singular(Token::Comma),
             b' '=> self.singular(Token::Space),
             b'\r' | b'\t' | b'\n' => self.singular(Token::LineFeed(b)),
-            byte => self.singular(Token::Ignore(b)),
             0 => Ok(Token::EOF),
+            _ => self.singular(Token::Ignore(b)),
         }
     }
 
     fn comment(&mut self) -> Result<Token, TokenErr> {
         let mut collection = vec![];
         loop {
-            let cr = self.reader.get();
-            // eof
-            if cr == 0 {
-                return Err(TokenErr{
-                    text: "Incomplete multi-line comment."
-                });
+            let b = self.reader.get();
+            if b == 0 {
+                return terr("Incomplete multi-line comment.");
             }
             
-            collection.push(cr);
-            if cr == b'*' && self.reader.peek() == b'/' {
+            collection.push(b);
+            if b == b'*' && self.reader.peek() == b'/' {
                 let get_peeked = self.reader.get();
                 collection.push(get_peeked);
                 break
