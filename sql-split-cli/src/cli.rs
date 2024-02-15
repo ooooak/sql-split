@@ -44,7 +44,19 @@ fn get_output_size(input: Option<&str>) -> usize {
     }
 }
 
-pub fn get_fd(file: Option<&str>) -> (String, File) {
+fn get_dir_name(path: &Path) -> String {
+    if let Some(val) = path.file_name()  {
+        if let Some(val) = val.to_str() {
+            let name = val.split(".").next();
+            if let Some(name) = name {
+                return name.replace(" ", "_")
+            }
+        }
+    }
+    log_error("invalid dir name");
+}
+
+fn get_fd(file: Option<&str>) -> (String, File) {
     if file.is_none() {
         log_error("File name is missing")
     }
@@ -60,8 +72,7 @@ pub fn get_fd(file: Option<&str>) -> (String, File) {
     }
 
     // its all fun and games until you try to get the file name
-    let name = path.file_name().unwrap().to_str().unwrap().to_owned();
-
+    let name = get_dir_name(path);
     (name, file.unwrap())
 }
 

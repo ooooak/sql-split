@@ -25,8 +25,11 @@ fn create_file(dir_name: &String, name: usize) -> File {
 }
 
 
-fn main(){
+fn main() {
     let args = cli::args();
+
+    // Create dir
+    let _ = std::fs::create_dir(format!("./{:?}", args.name));
 
     let mut splitter = Splitter::new(SplitterSettings {
         write: args.output_size,
