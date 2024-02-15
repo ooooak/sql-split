@@ -16,6 +16,7 @@ pub enum Token{
     SemiColon,
     Ignore(u8),
     Dot,
+    EOF
 }
 
 impl Token {
@@ -44,6 +45,7 @@ impl Token {
             Token::Dot => vec![b'.'],
             Token::Space => vec![b' '],
             Token::LineFeed(byte) => vec![byte],
+            Token::EOF => Default::default(),
         }        
     }
 }
