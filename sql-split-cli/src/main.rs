@@ -19,45 +19,34 @@ fn log_error(err: &str) -> ! {
     process::exit(0)
 }
 
-fn create_file(name: usize) -> File {
-    let file_name = format!("./{:?}.sql", name);
+fn create_file(dir_name: &String, name: usize) -> File {
+    let file_name = format!("./{:?}/{:?}.sql", dir_name, name);
     File::create(file_name).unwrap()
 }
 
 
 fn main(){
-    let (file, write_buffer) = cli::args();
-
-    let file = match file {
-        Ok(file) => file,
-        Err(e) => log_error(e),
-    };
-
-    let write_buffer = match write_buffer {
-        Ok(file) => file,
-        Err(e) => log_error(e.as_str()),
-    };
+    let args = cli::args();
 
     let mut splitter = Splitter::new(SplitterSettings {
-        write: write_buffer,
-        file,
+        write: args.output_size,
+        file: args.file,
     });
 
     let mut file_count = 1;
-    let mut buffer = create_file(file_count);
+    let mut buffer = create_file(&args.name, file_count);
     let mut first_file = true;
 
     loop {
         match splitter.process() {
-            SplitterState::Chunk(file_state, tokens) => {
-                if file_state == splitter::FileState::New {
+            SplitterState::Chunk(create_new_file, tokens) => {
+                if create_new_file  {
                     if first_file == true {
                         first_file = false;
                         continue;
                     }
-
                     file_count += 1;
-                    buffer = create_file(file_count);
+                    buffer = create_file(&args.name, file_count);
                 }
 
                 buffer.write_all(&tokens).unwrap();

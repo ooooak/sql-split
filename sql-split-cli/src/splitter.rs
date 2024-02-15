@@ -12,22 +12,6 @@ pub struct SplitterSettings{
     pub file: std::fs::File,
 }
 
-
-#[derive(Debug,PartialEq,Clone)]
-pub enum FileState{
-    New,
-    Continue,
-}
-
-impl std::fmt::Display for FileState {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self{
-            FileState::New => write!(f, "{}", "New"),
-            FileState::Continue => write!(f, "{}", "Continue")
-        }        
-    }
-}
-
 pub struct Splitter {
     parser: Parser,
     total_bytes: usize,
@@ -38,7 +22,7 @@ pub struct Splitter {
 pub enum SplitterState{
     SyntaxErr(TokenErr),
     // Reached output limit. send the chunk
-    Chunk(FileState, Vec<u8>),
+    Chunk(bool, Vec<u8>),
     // reached the EOF.
     Done,
 }
@@ -49,16 +33,8 @@ impl Splitter {
         Self {
             parser: Parser::new(tokenizer),
             total_bytes: 0,
-            last_insert: vec![],
+            last_insert: Vec::new(),
             max_write_size: settings.write,
-        }
-    }
-
-    fn file_state(&self, starting_total: usize) -> FileState {
-        if starting_total == 0 {
-            FileState::New
-        }else{
-            FileState::Continue
         }
     }
 
@@ -67,7 +43,9 @@ impl Splitter {
         if self.reached_limit(self.total_bytes) {
             self.total_bytes = 0;
         }
-        SplitterState::Chunk(self.file_state(starting_total), tokens)
+
+        let new_file_starts = starting_total == 0;
+        SplitterState::Chunk(new_file_starts, tokens)
     }
 
     fn reached_limit(&self, total: usize) -> bool{
