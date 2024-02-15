@@ -26,13 +26,13 @@ impl Reader {
     }
 
     #[inline(always)]
-    pub fn get(&mut self) -> Option<u8> {
+    pub fn get(&mut self) -> u8 {
         let byte = self.peek();
         self.cursor += 1;
         byte
     }
 
-    pub fn peek_next(&mut self) -> Option<u8> {
+    pub fn peek_next(&mut self) -> u8 {
         if self.next_in_current_buff() {
             self.peek_next_from_buff()
         } else {
@@ -46,19 +46,17 @@ impl Reader {
     }
 
     #[inline(always)]
-    pub fn peek(&mut self) -> Option<u8> {
+    pub fn peek(&mut self) -> u8 {
         if self.bytes_read == 0 {
-            return None
+            return 0
         }
 
         if self.cursor < self.bytes_read {
             let byte = self.buffer.get(self.cursor).unwrap();
-            return Some(*byte)
+            return *byte
         }
 
-        // out of index load next buffer
         self.fill_buf();
-
         self.peek()
     }
 
@@ -72,23 +70,21 @@ impl Reader {
         self.cursor = 0;
     }
 
-    fn peek_next_from_file(&mut self) -> Option<u8> {
+    fn peek_next_from_file(&mut self) -> u8 {
         let mut tmp_buff = [0; 1];
-
-        // move ahead
         let _ = self.file.seek(SeekFrom::Current(1)); 
         let read = self.file.read(&mut tmp_buff).expect("unable to read buff");
         if read == 0 {
             let _ = self.file.seek(SeekFrom::Current(-1)); 
-            return None
+            return 0
         }
 
         // move back
         let _ = self.file.seek(SeekFrom::Current(-2)); 
-        Some(tmp_buff[0])
+        tmp_buff[0]
     }
 
-    fn peek_next_from_buff(&mut self) -> Option<u8> {
+    fn peek_next_from_buff(&mut self) -> u8 {
         self.cursor += 1;
         let item = self.peek();
         self.cursor -= 1;
@@ -106,7 +102,7 @@ mod reader_test{
     fn empty_file(){
         let file = File::open("../resources/test_db/empty.sql").unwrap();
         let mut reader = Reader::new(file);
-        assert_eq!(reader.get(), None);
+        assert_eq!(reader.get(), 0);
     }
 
     #[test]
@@ -114,44 +110,43 @@ mod reader_test{
         let file = File::open("../resources/test_db/content.sql").unwrap();
         let mut reader = Reader::new(file);
         
-        assert_eq!(reader.get(), Some(b'1'));
-        assert_eq!(reader.get(), Some(b'2'));
-        assert_eq!(reader.get(), Some(b'3'));
-        assert_eq!(reader.get(), Some(b'4'));
-        println!("{:?}", char::from_u32(reader.peek_next().unwrap() as u32));
+        assert_eq!(reader.get(), b'1');
+        assert_eq!(reader.get(), b'2');
+        assert_eq!(reader.get(), b'3');
+        assert_eq!(reader.get(), b'4');
+        println!("{:?}", char::from_u32(reader.peek_next() as u32));
 
-        assert_eq!(reader.get(), Some(b'5'));
-        println!("{:?}", char::from_u32(reader.peek_next().unwrap() as u32));
+        assert_eq!(reader.get(), b'5');
+        println!("{:?}", char::from_u32(reader.peek_next() as u32));
 
-        assert_eq!(reader.get(), Some(b'6'));
-        println!("{:?}", char::from_u32(reader.peek_next().unwrap() as u32));
+        assert_eq!(reader.get(), b'6');
+        println!("{:?}", char::from_u32(reader.peek_next() as u32));
 
-        assert_eq!(reader.get(), Some(b'7'));
-        assert_eq!(reader.get(), Some(b'8'));
-        assert_eq!(reader.get(), Some(b'9'));
-        assert_eq!(reader.get(), Some(b'0'));
-        assert_eq!(reader.get().is_none(), true);
-        assert_eq!(reader.get().is_none(), true);
+        assert_eq!(reader.get(), b'7');
+        assert_eq!(reader.get(), b'8');
+        assert_eq!(reader.get(), b'9');
+        assert_eq!(reader.get(), b'0');
+        assert_eq!(reader.get() == 0, true);
+        assert_eq!(reader.get() == 0, true);
     }
 
     #[test]
     fn peek(){
         let file = File::open("../resources/test_db/content.sql").unwrap();
         let mut reader = Reader::new(file);
-        assert_eq!(reader.peek(), Some(b'1'));
+        assert_eq!(reader.peek(), b'1');
         let _skip_it = reader.get();
-
-        assert_eq!(reader.peek(), Some(b'2'));
+        assert_eq!(reader.peek(), b'2');
     }
 
     #[test]
     fn peek_next(){
         let file = File::open("../resources/test_db/content.sql").unwrap();
         let mut reader = Reader::new(file);
-        assert_eq!(reader.peek_next(), Some(b'2'));
-        assert_eq!(reader.get(), Some(b'1'));
-        assert_eq!(reader.get(), Some(b'2'));
-        assert_eq!(reader.peek(), Some(b'3'));
-        assert_eq!(reader.peek_next(), Some(b'4'));
+        assert_eq!(reader.peek_next(), b'2');
+        assert_eq!(reader.get(), b'1');
+        assert_eq!(reader.get(), b'2');
+        assert_eq!(reader.peek(), b'3');
+        assert_eq!(reader.peek_next(), b'4');
     }
 }

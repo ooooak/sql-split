@@ -12,22 +12,6 @@ pub struct SplitterSettings{
     pub file: std::fs::File,
 }
 
-
-#[derive(Debug,PartialEq,Clone)]
-pub enum FileState{
-    New,
-    Continue,
-}
-
-impl std::fmt::Display for FileState {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self{
-            FileState::New => write!(f, "{}", "New"),
-            FileState::Continue => write!(f, "{}", "Continue")
-        }        
-    }
-}
-
 pub struct Splitter {
     parser: Parser,
     total_bytes: usize,
@@ -38,7 +22,7 @@ pub struct Splitter {
 pub enum SplitterState{
     SyntaxErr(TokenErr),
     // Reached output limit. send the chunk
-    Chunk(FileState, Vec<u8>),
+    Chunk(bool, Vec<u8>),
     // reached the EOF.
     Done,
 }
@@ -49,16 +33,8 @@ impl Splitter {
         Self {
             parser: Parser::new(tokenizer),
             total_bytes: 0,
-            last_insert: vec![],
+            last_insert: Vec::new(),
             max_write_size: settings.write,
-        }
-    }
-
-    fn file_state(&self, starting_total: usize) -> FileState {
-        if starting_total == 0 {
-            FileState::New
-        }else{
-            FileState::Continue
         }
     }
 
@@ -68,7 +44,8 @@ impl Splitter {
             self.total_bytes = 0;
         }
 
-        SplitterState::Chunk(self.file_state(starting_total), tokens)
+        let new_file_starts = starting_total == 0;
+        SplitterState::Chunk(new_file_starts, tokens)
     }
 
     fn reached_limit(&self, total: usize) -> bool{
@@ -86,36 +63,35 @@ impl Splitter {
     
     pub fn process(&mut self) -> SplitterState {
         let starting_total = self.total_bytes;
-        match self.parser.token_stream() {
-            Ok(Some(item)) => {
-                match item {
-                    TokenStream::Insert(insert_with_values, insert_stmt) => {
-                        self.last_insert = insert_stmt;                        
-                        self.send(insert_with_values, starting_total)
-                    },
-                    TokenStream::ValuesTuple(tokens) => {
-                        let mut ret = vec![];
-                        // starting with fresh collection
-                        // push last insert statement
-                        if starting_total == 0 {
-                            self.copy_last_insert(&mut ret);
-                        }
-
-                        ret.extend(tokens);
-                        // maxed out in value tuple close statement
-                        if self.reached_limit(starting_total + ret.len()) {
-                            self.close_values_tuple(&mut ret)
-                        }
-                        
-                        self.send(ret, starting_total)
-                    },
-                    TokenStream::Block(tokens) => self.send(tokens, starting_total),
-                    TokenStream::Comment(tokens) |
-                    TokenStream::SpaceOrLineFeed(tokens) => self.send(tokens, starting_total),
-                }
+        let token = self.parser.token_stream();
+        if token.is_err() {
+            return SplitterState::SyntaxErr(token.unwrap_err())
+        }
+        match token.unwrap() {
+            TokenStream::Insert(insert_with_values, insert_stmt) => {
+                self.last_insert = insert_stmt;                        
+                self.send(insert_with_values, starting_total)
             },
-            Ok(None) => SplitterState::Done,
-            Err(e) => SplitterState::SyntaxErr(e),
+            TokenStream::ValuesTuple(tokens) => {
+                let mut ret = vec![];
+                if starting_total == 0 {
+                    // starting with fresh collection
+                    // push last insert statement
+                    self.copy_last_insert(&mut ret);
+                }
+
+                ret.extend(tokens);
+                if self.reached_limit(starting_total + ret.len()) {
+                    // maxed out in value tuple close statement
+                    self.close_values_tuple(&mut ret)
+                }
+                
+                self.send(ret, starting_total)
+            },
+            TokenStream::Block(tokens) => self.send(tokens, starting_total),
+            TokenStream::Comment(tokens) |
+            TokenStream::SpaceOrLineFeed(tokens) => self.send(tokens, starting_total),
+            TokenStream::End => SplitterState::Done,
         }
     }
 }

@@ -1,66 +1,93 @@
 use clap::App;
 use std::fs::File;
-use std::result::Result;
 use std::str;
 use std::path::Path;
+// use std::ffi::OsStr;
 
-fn parse_size(input: Option<&str>, arg_name: &str) -> Result<usize, String> {
-    match input {
-        Some(value) => {
-            if value.len() < 3 {
-                return Err(format!("{} has invalid length.", arg_name))
-            }
+pub struct CliArgs {
+    pub name: String,
+    pub output_size: usize,
+    pub file: File
+}
 
-            let (number, format) = value.split_at(value.len() - 2);
-            let offset  = match format {
-                "kb" => 1024,
-                "mb" => 1024 * 1024,
-                "gb" => 1024 * 1024 * 1024,
-                _ => 0,
-            };
+fn log_error(err: &str) -> ! {
+    eprintln!("{}", err);
+    std::process::exit(0)
+}
 
-            if offset == 0 {
-                return Err(format!(
-                    "{} has invalid format. choose from kb, mb or gb.", 
-                    arg_name
-                ))
-            }
-            match number.parse::<usize>(){
-                Ok(number) => Ok(offset * number),
-                Err(_) => {
-                    Err(format!(
-                        "unable to parse number {} number", 
-                        arg_name
-                    ))
-                }
-            }
-        },
-        None => {
-            Err(format!("{} is required", arg_name))
-        },
+fn get_output_size(input: Option<&str>) -> usize {
+    if input.is_none() {
+        log_error("output-size is required")
     }
 
+    let val = input.unwrap();
+    if val.len() < 3 {
+        log_error("output-size has invalid length.")
+    }
+
+    let (number, format) = val.split_at(val.len() - 2);
+    let offset  = match format {
+        "kb" => 1024,
+        "mb" => 1024 * 1024,
+        "gb" => 1024 * 1024 * 1024,
+        _ => 0,
+    };
+
+    if offset == 0 {
+        log_error("output-size has invalid format. choose from kb, mb or gb.")
+    }
+    match number.parse::<usize>() {
+        Ok(number) => offset * number,
+        Err(_) => {
+            log_error("unable to parse number output-size number")
+        }
+    }
+}
+
+fn get_dir_name(path: &Path) -> String {
+    if let Some(val) = path.file_name()  {
+        if let Some(val) = val.to_str() {
+            let name = val.split(".").next();
+            if let Some(name) = name {
+                return name.replace(" ", "_")
+            }
+        }
+    }
+    log_error("invalid dir name");
+}
+
+fn get_fd(file: Option<&str>) -> (String, File) {
+    if file.is_none() {
+        log_error("File name is missing")
+    }
+
+    let path = Path::new(file.unwrap());
+    if !path.exists() {
+        log_error("File path is invalid")
+    }
+
+    let file = File::open(path);
+    if file.is_err() {
+        log_error("Unable to open file")
+    }
+
+    // its all fun and games until you try to get the file name
+    let name = get_dir_name(path);
+    (name, file.unwrap())
 }
 
 
-pub fn args() -> (Result<File, &'static str>, Result<usize, String>) {
+pub fn args() -> CliArgs {
     let yaml = load_yaml!("../cli.yml");
     let matches = App::from_yaml(yaml).get_matches();
-    let write_buffer = matches.value_of("OUTPUT_SIZE");
-    let file = match matches.value_of("INPUT") {
-        Some(file) => {
-            let path = Path::new(file);
-            if path.exists(){
-                match File::open(path) {
-                    Ok(file) => Ok(file),
-                    Err(_) => Err("Unable to open file"),
-                }
-            }else{
-                Err("File path is invalid")
-            }
-        },
-        None => Err("File name is missing"),
-    };
 
-    (file, parse_size(write_buffer, "output-size"))
+    let output_size = get_output_size(matches.value_of("OUTPUT_SIZE"));
+    let (name, file) = get_fd(matches.value_of("INPUT"));
+
+
+    CliArgs {
+        name,
+        file, 
+        output_size,
+    }
 }

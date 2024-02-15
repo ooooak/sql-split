@@ -1,5 +1,5 @@
 use crate::tokenizer::{
-    token_err::TokenErr,
+    token_err::{TokenErr, terr},
     token::Token,
     tokenizer::Tokenizer
 };
@@ -11,6 +11,7 @@ pub enum TokenStream {
     Block(Vec<u8>),
     Comment(Vec<u8>),
     SpaceOrLineFeed(Vec<u8>),
+    End
 }
 
 pub struct Parser {
@@ -25,31 +26,25 @@ impl Parser {
     pub fn read_while(&mut self, token: &Token) -> Result<Vec<u8>, TokenErr> {
         let mut collection = vec![];
         loop {
-            match self.tokenizer.token()? {
-                Some(t) => {
-                    if t == *token {
-                        collection.extend(t.value());
-                        break
-                    }else{
-                        collection.extend(t.value());
-                    }
-                },
-                None => {
-                    return Err(TokenErr{
-                        text:"invalid end of file"
-                    })
-                }
+            let t = self.tokenizer.token()?;
+            if t == Token::EOF {
+                return terr("invalid end of file")
             }
+            if t == *token {
+                collection.extend(t.value());
+                break
+            }
+            collection.extend(t.value());
         }
-
         Ok(collection)
     }
 
     pub fn values(&mut self) -> Result<Vec<u8>, TokenErr> {
         let mut collection = vec![];
         loop {
-            match self.tokenizer.token()? {
-                Some(token @ Token::LP) => {
+            let token = self.tokenizer.token()?;
+            match token {
+                Token::LP => {
                     collection.extend(token.value());
                     match self.read_while(&Token::RP) {
                         Ok(val) => {
@@ -58,22 +53,12 @@ impl Parser {
                         Err(e) => return Err(e),
                     }                    
                 },
-                Some(token @ Token::Comma) => {
+                Token::Comma | Token::SemiColon => {
                     collection.extend(token.value());
                     break;
                 },
-                Some(token @ Token::SemiColon) => {
-                    collection.extend(token.value());
-                    break;
-                },
-                Some(token) => {
-                    collection.extend(token.value());
-                },
-                None => {
-                    return Err(TokenErr{
-                        text: "Unable to parse values."
-                    })
-                }
+                Token::EOF => return terr("Unable to parse values."),
+                _ => collection.extend(token.value())
             }
         }
         Ok(collection)
@@ -84,24 +69,16 @@ impl Parser {
         let value = self.read_while(&Token::RP)?; 
         collection.extend(value);
         loop {
-            match self.tokenizer.token()? {
-                Some(token @ Token::Comma) => {
+            let token = self.tokenizer.token()?;
+            match token {
+                Token::EOF => return terr("Unable to parse values."),
+                Token::Comma | Token::SemiColon => {
                     collection.extend(token.value());
                     break;
                 },
-                Some(token @ Token::SemiColon) => {
-                    collection.extend(token.value());
-                    break;
-                },
-                Some(token) => collection.extend(token.value()),
-                None => {
-                    return Err(TokenErr{
-                        text: "Unable to parse values."
-                    })
-                },
+                token => collection.extend(token.value()),
             }
         }
-
         Ok(collection)
     }
 
@@ -110,84 +87,73 @@ impl Parser {
         let mut insert_stmt;
 
         loop {
-            match self.tokenizer.token()? {
-                Some(token) => {
-                    if token.keyword("values") {
-                        collection.extend(token.value());
-                        insert_stmt = collection.clone();
-                        insert_stmt.push(b' ');                        
-
-                        collection.extend(self.values()?);                        
-                        break;
-                    }else{
-                        collection.extend(token.value());
-                    }
-                },
-                None => {
-                    return Err(TokenErr{
-                        text: "Incomplete Insert statement."
-                    })
-                },
+            let token = self.tokenizer.token()?;
+            if token == Token::EOF {
+                return terr("Incomplete Insert statement.")
             }
+            if token.keyword("values") {
+                collection.extend(token.value());
+                insert_stmt = collection.clone();
+                insert_stmt.push(b' ');
+                collection.extend(self.values()?);                        
+                break;
+            } 
+            collection.extend(token.value());
         }
-
         Ok((collection, insert_stmt))
     }
 
-    pub fn token_stream(&mut self) -> Result<Option<TokenStream>, TokenErr> {
-        match self.tokenizer.token()? {
-            Some(token) => {
-                match token {
-                    Token::Keyword(_) => { 
-                        if token.keyword("insert") {
-                            // parse insert statement
-                            // should end with with , or ;
-                            // example: "insert into xyz values (),"
-                            // example: "insert into xyz values ();"
+    pub fn token_stream(&mut self) -> Result<TokenStream, TokenErr> {
+        let token = self.tokenizer.token()?;
+        match token {
+            Token::EOF => Ok(TokenStream::End),
+            Token::Keyword(_) => { 
+                if token.keyword("insert") {
+                    // parse insert statement
+                    // should end with with , or ;
+                    // example: "insert into xyz values (),"
+                    // example: "insert into xyz values ();"
 
-                            let (insert, insert_stmt) = self.insert(token.value())?;
-                            Ok(Some(TokenStream::Insert(insert, insert_stmt)))
-                        }else{
-                            // we assume its a block handle blocks
-                            // anything that ends with `;` and 
-                            // start with create, drop or set etc etc
-                            match self.read_while(&Token::SemiColon) {
-                                Ok(val) => {
-                                    let mut output = token.value();
-                                    output.extend(val);
-                                    Ok(Some(TokenStream::Block(output)))
-                                },
-                                Err(e) => Err(e)  
-                            }
-                        }
-                    },
-                    Token::LP => {
-                        let mut output = token.value();
-                        output.extend(self.values_tuple()?);
-                        Ok(Some(TokenStream::ValuesTuple(output)))
-                    }
-                    Token::Comment(_) | 
-                    Token::InlineComment(_) => {
-                        Ok(Some(TokenStream::Comment(token.value())))
-                    },
-                    Token::RP |
-                    Token::Dot |
-                    Token::String(_) |
-                    Token::Identifier(_) |
-                    Token::Comma |
-                    Token::Ignore(_) => {
-                        Err(TokenErr{
-                            text: "Invalid sql file."
-                        })
-                    },
-                    Token::SemiColon |
-                    Token::Space |
-                    Token::LineFeed(_) => {
-                        Ok(Some(TokenStream::SpaceOrLineFeed(token.value())))
+                    let (insert, insert_stmt) = self.insert(token.value())?;
+                    Ok(TokenStream::Insert(insert, insert_stmt))
+                }else{
+                    // we assume its a block handle blocks
+                    // anything that ends with `;` and 
+                    // start with create, drop or set etc etc
+                    match self.read_while(&Token::SemiColon) {
+                        Ok(val) => {
+                            let mut output = token.value();
+                            output.extend(val);
+                            Ok(TokenStream::Block(output))
+                        },
+                        Err(e) => Err(e)  
                     }
                 }
             },
-            None => Ok(None),
+            Token::LP => {
+                let mut output = token.value();
+                output.extend(self.values_tuple()?);
+                Ok(TokenStream::ValuesTuple(output))
+            }
+            Token::Comment(_) | 
+            Token::InlineComment(_) => {
+                Ok(TokenStream::Comment(token.value()))
+            },
+            Token::RP |
+            Token::Dot |
+            Token::String(_) |
+            Token::Identifier(_) |
+            Token::Comma |
+            Token::Ignore(_) => {
+                Err(TokenErr{
+                    text: "Invalid sql file."
+                })
+            },
+            Token::SemiColon |
+            Token::Space |
+            Token::LineFeed(_) => {
+                Ok(TokenStream::SpaceOrLineFeed(token.value()))
+            }
         }
     }
 }
@@ -206,10 +172,10 @@ mod reader_test{
     use super::Parser;
     use super::TokenStream;
 
-    type TS = Result<Option<TokenStream>, TokenErr>;    
+    type TS = Result<TokenStream, TokenErr>;    
     fn is_space(value: TS) -> bool {
         match value {
-            Ok(Some(TokenStream::SpaceOrLineFeed(_))) => {
+            Ok(TokenStream::SpaceOrLineFeed(_)) => {
                 true
             },
             _ => false,
@@ -218,7 +184,7 @@ mod reader_test{
 
     fn is_comment(value: TS) -> bool {
         match value {
-            Ok(Some(TokenStream::Comment(_))) => {
+            Ok(TokenStream::Comment(_)) => {
                 true
             },
             _ => false,
@@ -227,7 +193,7 @@ mod reader_test{
 
     fn valid_values_tuple(value: TS) -> (bool, &'static str) {
         match value {
-            Ok(Some(TokenStream::ValuesTuple(tokens))) => {
+            Ok(TokenStream::ValuesTuple(tokens)) => {
                 match tokens[tokens.len() - 1] {
                     b';' => (true, ""),
                     _ => (false, "Last token should be semicolon or comma"),
@@ -239,7 +205,7 @@ mod reader_test{
 
     fn valid_block(value: TS) -> (bool, &'static str) {
         match value {
-            Ok(Some(TokenStream::Block(tokens))) => {
+            Ok(TokenStream::Block(tokens)) => {
                 match tokens[tokens.len() - 1] {
                     b';' => (true, ""),
                     _ => (false, "Last token should be semicolon"),
@@ -251,7 +217,7 @@ mod reader_test{
 
     fn valid_insert(value: TS) -> (bool, &'static str) {
         match value {
-            Ok(Some(TokenStream::Insert(tokens, _))) => {
+            Ok(TokenStream::Insert(tokens, _)) => {
                 match tokens[tokens.len() - 1] {
                     b';' => (true, ""),
                     b',' => (true, ""),
