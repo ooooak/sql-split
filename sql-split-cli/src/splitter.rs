@@ -1,10 +1,10 @@
 use sql_split_reader::Reader;
 
-use crate::parser::parser::TokenStream;
-use crate::parser::parser::Parser;
+use crate::parser::TokenStream;
+use crate::parser::Parser;
 use crate::tokenizer::{
-    tokenizer::Tokenizer, 
-    token_err::TokenErr, 
+    Tokenizer, 
+    TokenErr, 
 };
 
 pub struct SplitterSettings{

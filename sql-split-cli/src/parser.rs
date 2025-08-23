@@ -1,7 +1,7 @@
 use crate::tokenizer::{
-    token_err::TokenErr,
-    token::Token,
-    tokenizer::Tokenizer
+    TokenErr,
+    Token,
+    Tokenizer
 };
 
 #[derive(Debug,PartialEq)]
